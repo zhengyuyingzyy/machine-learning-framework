@@ -1,0 +1,71 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+
+def loadDataSet():
+    data = pd.read_csv('HTRU_2_train.csv',header = None)#读取鸢尾花数据，指定列名 
+    data[2] = pd.Categorical(data[2]).codes#获取此分类的类别代码
+    dataMatIn,classLabels = np.split(data.values,(2,),axis = 1)#将数据进行纵向切分，将所有数据在第2,3列之间分隔并赋值
+    dataMatIn = np.insert(dataMatIn, 0, 1, axis = 1)
+    return dataMatIn,classLabels
+
+
+def sigmoid(z):
+    return 1/(1+np.exp(-z))
+
+
+def grad_descent(dataMatIn,classLabels):
+    dataMatrix = np.mat(dataMatIn)#转化成矩阵
+    labelMat = np.mat(classLabels)
+    m,n = np.shape(dataMatrix)#将矩阵的行和列赋值给m,n
+    weights = np.ones((n,1))#生成一个n行1列的单位矩阵
+    alpha = 0.2#学习率
+    maxCycle = 500#最大循环次数
+    
+    for i in range(maxCycle):
+        h = sigmoid(dataMatrix * weights)#预测值
+        weights = weights - alpha * dataMatrix.transpose() * (h - labelMat)#更新权重
+    return weights#返回回归系数
+
+
+def plotBestFit(weights):
+    dataMat,labelMat=loadDataSet()#获取数据和类别
+    dataArr = np.array(dataMat)#将数据转化为数组
+    n = np.shape(dataArr)[0] #数组中第一列的个数
+    xcord1 = []; ycord1 = []#空数组
+    xcord2 = []; ycord2 = []
+    for i in range(n):
+        if int(labelMat[i])== 1:#如果类别为1
+            xcord1.append(dataArr[i,1]); ycord1.append(dataArr[i,2])
+        else:
+            xcord2.append(dataArr[i,1]); ycord2.append(dataArr[i,2])
+    fig = plt.figure()#画布
+    ax = fig.add_subplot(111)
+    ax.scatter(xcord1, ycord1, s=30, c='red', marker='s')#散点图
+    ax.scatter(xcord2, ycord2, s=30, c='green')
+    x = np.arange(0, 180, 0.1)
+    y = ((-weights[0]-weights[1]*x)/weights[2])#设置sigmoid函数为0 # 直线方程：weights[0] + weights[1] * x + weights[2] * 2 = 0
+    ax.plot(x, y)
+    plt.xlabel('X1'); plt.ylabel('X2');
+    plt.show()
+    
+    
+dataMatIn,classLabels = loadDataSet()
+weights = grad_descent(dataMatIn,classLabels)
+weights=np.array(weights).ravel()
+plotBestFit(weights)
+
+
+#预测
+pre = pd.read_csv('HTRU_2_test.csv',header = None)
+truex,truey = np.split(pre.values,(1,),axis = 1)#将数据进行纵向切分，将所有数据在第2,3列之间分隔并赋值
+prey = ((-weights[0]-weights[1]*truex)/weights[2])
+kong = []
+for i in range(700):
+    if(prey[i] > truey[i]):
+        kong.append(0)
+    else:
+        kong.append(1)
+test = pd.DataFrame(data = kong,index = range(1,701),columns=['y'])
+test.index.name = 'id'
+test.to_csv('new3.csv')
